@@ -1,0 +1,17 @@
+services:
+  syncthing:
+    image: lscr.io/linuxserver/syncthing:latest
+    container_name: syncthing
+    restart: unless-stopped
+    network_mode: host
+    env_file:
+      - ${ENV_BASE}/_${COMPOSE_PROJECT_NAME}.env
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-Europe/Paris}
+    volumes:
+      - ./config:/config
+      - ${DATA_PATH}:/data
+      - ${OBSIDIAN_DATA_PATH}:/obsidian/obsidianData
+networks: {}

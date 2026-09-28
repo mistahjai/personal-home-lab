@@ -1,0 +1,24 @@
+services:
+  calibre:
+    image: lscr.io/linuxserver/calibre:latest
+    container_name: calibre
+    env_file:
+      - ${ENV_BASE}/_${COMPOSE_PROJECT_NAME}.env
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ} # Change to your timezone, e.g., America/New_York
+    volumes:
+      - ./config:/config
+      - ${CALIBRE_DATA:-/path/to/ebooks}:/books # Where Calibre will save clean, sorted books
+      - ${CALIBRE_IMPORT_DATA:-/path/to/import/ebooks}:/import:ro # Read-only access to your messy source files
+    ports:
+      - "${CALIBRE_PORT:-3003}:8080" # Main Web Desktop UI (VNC over HTTP)
+      - "${CALIBRE_CONTENT_PORT:-3004}:8081" # Calibre Content Server (Optional: for direct book downloading)      
+    # --- Performance Optimizations ---
+    shm_size: "1gb" # Crucial: Prevents browser tabs crashing inside the VNC interface
+    deploy:
+      resources:
+        limits:
+          memory: 2048M # Caps RAM usage to prevent it from overwhelming your host during large imports
+    restart: unless-stopped

@@ -1,0 +1,72 @@
+services:
+  # ----------------------------------------------------
+  # Paperless-ngx
+  # ----------------------------------------------------
+  paperless-ngx:
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    container_name: paperless-ngx
+    restart: unless-stopped
+    env_file:
+      - ${ENV_BASE}/_${COMPOSE_PROJECT_NAME}.env
+    environment:
+      # Redis connection
+      - PAPERLESS_REDIS=redis://paperless-redis:6379
+      # PostgreSQL database
+      - PAPERLESS_DBHOST=paperless-db
+      # File paths
+      - PAPERLESS_FILESTORE_PATH=/usr/src/paperless/data
+      - PAPERLESS_CONSUMER_PATH=/usr/src/paperless/consumedir
+      - PAPERLESS_MEDIA_ROOT=/usr/src/paperless/media
+      - PAPERLESS_EXPORT_PATH=/usr/src/paperless/export 
+    ports:
+      - "${PAPERLESS_PORT:-8000}:8000"
+    volumes:
+      - paperless-data:/usr/src/paperless/data
+      - paperless-media:/usr/src/paperless/media
+      - paperless-export:/usr/src/paperless/export
+      - paperless-consumedir:/usr/src/paperless/consumedir
+    depends_on:
+      paperless-db:
+        condition: service_healthy
+      paperless-redis:
+        condition: service_healthy
+
+  # ----------------------------------------------------
+  # PostgreSQL Database for Paperless-ngx
+  # ----------------------------------------------------
+  paperless-db:
+    image: postgres:16-alpine
+    container_name: paperless-db
+    restart: unless-stopped
+    env_file:
+      - ${ENV_BASE}/_${COMPOSE_PROJECT_NAME}.env
+    volumes:
+      - paperless-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PAPERLESS_DBUSER:-paperless} -d ${PAPERLESS_DBNAME:-paperless}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ----------------------------------------------------
+  # Redis for Paperless-ngx
+  # ----------------------------------------------------
+  paperless-redis:
+    image: redis:7-alpine
+    container_name: paperless-redis
+    restart: unless-stopped
+    volumes:
+      - paperless-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  paperless-data:
+  paperless-media:
+  paperless-export:
+  paperless-consumedir:
+  paperless-db-data:
+  paperless-redis-data:

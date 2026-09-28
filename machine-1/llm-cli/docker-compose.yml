@@ -1,0 +1,59 @@
+services:
+  freellmapi:
+    image: ghcr.io/tashfeenahmed/freellmapi:latest
+    env_file:
+      - ${ENV_BASE}/_${COMPOSE_PROJECT_NAME}.env
+    environment:
+      NODE_ENV: production
+      PORT: "3001"
+      HOST_BIND: "0.0.0.0"
+      FREEAPI_CONFIG_JSON: |
+        {
+          "routing": { "strategy": "balanced" }
+        }
+    ports:
+      - "127.0.0.1:3001:3001"
+      - "${HOST_IP_PORT}:3001"
+    volumes:
+      - freellmapi-data:/app/server/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/api/ping').then((r) => { if (!r.ok) process.exit(1); }).catch(() => process.exit(1));"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - ${ENV_BASE}/_${COMPOSE_PROJECT_NAME}.env
+    environment:
+      OPENAI_API_BASE: http://freellmapi:3001/v1
+      ANTHROPIC_BASE_URL: http://freellmapi:3001
+      OPENCODE_CONFIG: '{"provider":{"openai":{"options":{"baseURL":"http://freellmapi:3001/v1"}}}}'
+      XDG_CONFIG_HOME: /root/.kimaki/opencode-conf
+      XDG_DATA_HOME: /root/.kimaki/opencode-data
+     
+    volumes:
+      - ${WORKSPACE_PATH}:/workspace
+      - dev-cache:/root/.cache
+      - claude-config:/root/.claude
+      - agy-config:/root/.gemini
+      - kimaki-config:/root/.kimaki
+    working_dir: /workspace
+    stdin_open: true
+    tty: true
+    depends_on:
+      freellmapi:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  freellmapi-data:
+  dev-cache:
+  claude-config:
+  agy-config:
+  kimaki-config:

@@ -1,0 +1,25 @@
+services:
+  obsidian:
+    image: ghcr.io/linuxserver/obsidian:latest
+    container_name: obsidian
+    security_opt:
+      - no-new-privileges:false
+      - seccomp:unconfined
+    healthcheck:
+      test: timeout 10s bash -c ':> /dev/tcp/127.0.0.1/3000' || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
+    ports:
+      - "3000:3000"
+    shm_size: "2gb"
+    volumes:
+      - ./config:/config:rw
+    env_file:
+      - ${ENV_BASE}/_${COMPOSE_PROJECT_NAME}.env
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: ${TZ:-Europe/Paris}
+    restart: unless-stopped

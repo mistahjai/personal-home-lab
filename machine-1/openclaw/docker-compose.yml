@@ -1,0 +1,40 @@
+services:
+  openclaw-gateway:
+    image: ${OPENCLAW_GATEWAY_IMAGE}  # Keep the browser here for AI tools
+    container_name: openclaw-gateway
+    restart: unless-stopped
+    ports:
+      - "${OPENCLAW_WEBHOOK_PORT:-18790}:18790"
+      - "${OPENCLAW_GATEWAY_PORT:-18789}:18789"
+    env_file:
+      - ${ENV_BASE}/_${COMPOSE_PROJECT_NAME}.env
+    environment:
+      - TZ=${TZ:-Europe/Paris}
+    cap_drop:
+      - NET_RAW
+      - NET_ADMIN
+    security_opt:
+      - no-new-privileges:true      
+    group_add:
+      - "${DOCKER_GID:-999}"
+    volumes:
+      - ./.openclaw-data:/home/node/.openclaw
+    # entrypoint: ["/bin/sh", "/clean-install.sh"]
+
+  openclaw-cli:
+    image: ${OPENCLAW_CLI_IMAGE}         # Swap to the standard minimal tag here!
+    container_name: openclaw-cli
+    network_mode: "service:openclaw-gateway"
+    env_file:
+      - ${ENV_BASE}/_${COMPOSE_PROJECT_NAME}.env
+    volumes:
+        - ./.openclaw-data:/home/node/.openclaw
+    profiles:
+      - tools
+
+# volumes:
+#   openclaw-data:
+  
+  
+
+

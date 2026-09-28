@@ -1,0 +1,17 @@
+services:
+  dockge:
+    image: louislam/dockge:latest
+    container_name: dockge
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    env_file:
+      - ${ENV_BASE}/_${COMPOSE_PROJECT_NAME}.env
+    ports:
+      - "5001:5001"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${LOCAL_MOUNT_PATH}:${LOCAL_MOUNT_PATH}
+      - ./dockge_data:/app/data
+    environment:
+      - DOCKGE_STACKS_DIR=${LOCAL_MOUNT_PATH}

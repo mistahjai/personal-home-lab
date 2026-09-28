@@ -1,0 +1,22 @@
+services:
+  # ----------------------------------------------------
+  # Uptime Kuma
+  # ----------------------------------------------------
+  uptime-kuma:
+    image: louislam/uptime-kuma:2
+    container_name: uptime-kuma
+    restart: unless-stopped
+    environment:
+      # Request timeout in seconds (default: 10)
+      - UP_TIMEOUT=${UP_TIMEOUT:-10}
+      # Number of retries before alert (default: 3)
+      - UP_RETRY_ALERT=${UP_RETRY_ALERT:-3}
+      # Timezone
+      - TZ=${TZ:-Europe/Paris}
+    ports:
+      - "${UPTIME_KUMA_PORT:-3131}:${UPTIME_KUMA_PORT:-3131}"
+    volumes:
+      - uptime-kuma-data:/app/data
+
+volumes:
+  uptime-kuma-data:

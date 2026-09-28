@@ -1,0 +1,33 @@
+services:
+  zotero:
+    image: lscr.io/linuxserver/zotero:latest
+    container_name: zotero
+    restart: unless-stopped
+    ports:
+      - ${ZOTERO_PORT:-3005}:3000 # LinuxServer standard web port is 3000, not 9900
+    env_file: 
+      - ${ENV_BASE}/_${COMPOSE_PROJECT_NAME}.env
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-Europe/Paris}
+    volumes:
+      - ./zotero-config:/config # Persists your plugins, profiles, and UI layout
+      - ${WEBDAV_DATA}:/mnt/webdav_files:ro
+    shm_size: 1gb # Crucial to prevent Zotero's embedded browser from crashing
+  
+  webdav:
+    image: apachewebdav/apachewebdav:latest
+    container_name: webdav
+    restart: unless-stopped
+    ports:
+      - ${WEBDAV_PORT:-9800}:80
+    env_file: 
+      - ${ENV_BASE}/_${COMPOSE_PROJECT_NAME}.env
+    environment:
+      - AUTH_TYPE=Digest
+      - PUID=1000
+      - PGID=1000
+    volumes:
+      - ${WEBDAV_DATA}:/var/lib/dav/data
+networks: {}

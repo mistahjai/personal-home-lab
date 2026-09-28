@@ -1,0 +1,33 @@
+# Docker and environment files to ignore
+
+.env
+.env.*
+!.env.example
+
+.claude
+PLAN.md
+
+machine-1/calibre/config/
+machine-1/immich/postgres/
+machine-1/obsidian/config/
+machine-1/openclaw/.openclaw-data/
+machine-1/stirling-pdf/stirling-data/
+machine-1/zotero-webdav/zotero-config/
+
+
+machine-1/syncthing/config/
+machine-1/dockge/dockge_data/
+machine-2/syncthing/config/
+machine-2/dockge/dockge_data/
+
+
+# Temporary build files
+*.tmp
+*.log
+
+# Docker socket (for security)
+/var/run/docker.sock
+
+# OS specific files
+.DS_Store
+Thumbs.db

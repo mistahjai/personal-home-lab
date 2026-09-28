@@ -1,0 +1,64 @@
+services:
+  llama-lunar-final:
+    image: ghcr.io/ggml-org/llama.cpp:server-vulkan
+    container_name: llama-vulkan
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    devices:
+      - /dev/dri:/dev/dri
+    group_add:
+      - "39"
+      - "105"
+
+    shm_size: "12g"
+
+    deploy:
+      resources:
+        limits:
+          memory: 12.8G
+
+    volumes:
+      - ${MODELS_FOLDER_PATH}:/models:ro
+
+    command:
+      # --- Multi-Model Discovery Layout ---
+      # - "-fit"
+      # - "off"
+
+      - "--log-verbosity"
+      - "4"
+      
+      - "--models-dir"
+      - "/models"
+      - "--models-max"
+      - "1"                  
+
+      # --- 64K Context Layout & Dynamic Scaling ---
+      - "--ctx-size"
+      - "32768"
+      - "--cache-type-k"
+      - "q8_0"             
+      - "--cache-type-v"
+      - "q4_0"             
+      - "--flash-attn"
+      - "on"                 
+      - "--cache-ram"
+      - "0"
+      - "--kv-unified"           # CRITICAL: Allocates memory incrementally to prevent 14.3GB boot crash
+
+      # --- Threading & Parallel Multi-Agent Execution ---
+      - "--n-gpu-layers"
+      - "99"
+
+      - "--no-warmup"               
+      - "--parallel"
+      - "2"                    
+      - "--cont-batching"                     
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "8080"
+
+      # - "--load-mode"
+      # - "none"

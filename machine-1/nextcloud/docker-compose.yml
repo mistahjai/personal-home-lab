@@ -1,0 +1,46 @@
+services:
+  # ----------------------------------------------------
+  # Nextcloud
+  # ----------------------------------------------------
+  nextcloud:
+    image: nextcloud:latest
+    container_name: nextcloud
+    restart: unless-stopped
+    env_file:
+      - ${ENV_BASE}/_${COMPOSE_PROJECT_NAME}.env
+    environment:
+      - POSTGRES_HOST=nextcloud-db
+    ports:
+      - "${NEXTCLOUD_PORT:-8080}:80"
+    volumes:
+      - nextcloud-data:/var/www/html
+      - nextcloud-config:/var/www/html/config
+      - nextcloud-apps:/var/www/html/custom_apps
+      - nextcloud-data-files:/var/www/html/data
+    depends_on:
+      nextcloud-db:
+        condition: service_healthy
+
+  # ----------------------------------------------------
+  # PostgreSQL Database for Nextcloud
+  # ----------------------------------------------------
+  nextcloud-db:
+    image: postgres:16-alpine
+    container_name: nextcloud-db
+    restart: unless-stopped
+    env_file:
+      - ${ENV_BASE}/_${COMPOSE_PROJECT_NAME}.env
+    volumes:
+      - nextcloud-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nextcloud} -d ${POSTGRES_DB:-nextcloud}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  nextcloud-data:
+  nextcloud-config:
+  nextcloud-apps:
+  nextcloud-data-files:
+  nextcloud-db-data:

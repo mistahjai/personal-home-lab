@@ -1,0 +1,124 @@
+services:
+  # ----------------------------------------------------
+  # 1. MINIFLUX (RSS Feed Reader)
+  # ----------------------------------------------------
+  miniflux:
+    image: miniflux/miniflux:latest
+    container_name: miniflux
+    depends_on:
+      miniflux-db:
+        condition: service_healthy
+    env_file:
+      - ${ENV_BASE}/_${COMPOSE_PROJECT_NAME}.env
+    environment:
+      - RUN_MIGRATIONS=1
+      - CREATE_ADMIN=1
+    ports:
+      - "${MINIFLUX_PORT:-8081}:8080"
+    restart: unless-stopped
+
+  miniflux-db:
+    image: postgres:16-alpine
+    container_name: miniflux-db
+    env_file:
+      - ${ENV_BASE}/_${COMPOSE_PROJECT_NAME}.env
+    environment:
+      - POSTGRES_DB=miniflux
+    volumes:
+      - miniflux_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${MINIFLUX_DB_USER:-miniflux} -d miniflux"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  # ----------------------------------------------------
+  # 2. WALLABAG (Read-it-Later & Kindle Bridge)
+  # ----------------------------------------------------
+  wallabag:
+    image: wallabag/wallabag:latest
+    container_name: wallabag
+    depends_on:
+      wallabag-db:
+        condition: service_healthy
+    env_file:
+      - ${ENV_BASE}/_${COMPOSE_PROJECT_NAME}.env
+    environment:
+      - SYMFONY__ENV__DATABASE_DRIVER=pdo_mysql
+      - SYMFONY__ENV__DATABASE_HOST=wallabag-db
+      - SYMFONY__ENV__DATABASE_PORT=3306
+      - SYMFONY__ENV__DATABASE_NAME=wallabag
+      - SYMFONY__ENV__DATABASE_USER=wallabag
+      - POPULATE_DATABASE=true
+    ports:
+      - "${WALLABAG_PORT:-8082}:80"
+    volumes:
+      - wallabag_images:/var/www/wallabag/web/assets/images
+    restart: unless-stopped
+
+  wallabag-db:
+    image: mariadb:10.11
+    container_name: wallabag-db
+    env_file:
+      - ${ENV_BASE}/_${COMPOSE_PROJECT_NAME}.env
+    environment:
+      - MYSQL_DATABASE=wallabag
+    volumes:
+      - wallabag_db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  # ----------------------------------------------------
+  # 3. KARAKEEP / HOARDER (AI Archiver Stack)
+  # ----------------------------------------------------
+  karakeep:
+    image: ghcr.io/karakeep-app/karakeep:release
+    container_name: karakeep
+    depends_on:
+      - karakeep-meilisearch
+      - karakeep-chrome
+    ports:
+      - "${KARAKEEP_PORT:-3333}:3000"
+    env_file:
+      - ${ENV_BASE}/_${COMPOSE_PROJECT_NAME}.env
+    environment:
+      - MEILI_HOST=http://karakeep-meilisearch:7700
+      - BROWSER_WEB_URL=http://karakeep-chrome:3000
+      - DATA_DIR=/data
+      - INFERENCE_LANG=english
+    volumes:
+      - karakeep_data:/data
+    restart: unless-stopped
+
+  karakeep-chrome:
+    image: ghcr.io/karakeep-app/karakeep-chrome:release
+    container_name: karakeep-chrome
+    command:
+      - --no-sandbox
+      - --disable-gpu
+      - --remote-debugging-address=0.0.0.0
+      - --remote-debugging-port=3000
+    restart: unless-stopped
+
+  karakeep-meilisearch:
+    image: getmeili/meilisearch:v1.11.1
+    container_name: karakeep-meilisearch
+    env_file:
+      - ${ENV_BASE}/_${COMPOSE_PROJECT_NAME}.env
+    volumes:
+      - karakeep_meili_data:/meili_data
+    restart: unless-stopped
+
+volumes:
+  miniflux_db_data:
+  wallabag_db_data:
+  wallabag_images:
+  karakeep_data:
+  karakeep_meili_data:
