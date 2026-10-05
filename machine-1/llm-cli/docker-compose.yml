@@ -16,6 +16,9 @@ services:
       - "${HOST_IP_PORT}:3001"
     volumes:
       - freellmapi-data:/app/server/data
+    networks:
+      - default
+      - dind-net
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/api/ping').then((r) => { if (!r.ok) process.exit(1); }).catch(() => process.exit(1));"]
@@ -36,7 +39,7 @@ services:
       OPENCODE_CONFIG: '{"provider":{"openai":{"options":{"baseURL":"http://freellmapi:3001/v1"}}}}'
       XDG_CONFIG_HOME: /root/.kimaki/opencode-conf
       XDG_DATA_HOME: /root/.kimaki/opencode-data
-     
+      DOCKER_HOST: tcp://dind:2375
     volumes:
       - ${WORKSPACE_PATH}:/workspace
       - dev-cache:/root/.cache
@@ -49,6 +52,9 @@ services:
     depends_on:
       freellmapi:
         condition: service_healthy
+    networks:
+      - default
+      - dind-net
     restart: unless-stopped
 
 volumes:
@@ -57,3 +63,6 @@ volumes:
   claude-config:
   agy-config:
   kimaki-config:
+networks:
+  dind-net:
+    external: true
