@@ -1,3 +1,6 @@
+FROM docker:cli AS docker-cli
+FROM docker/compose-bin:latest AS compose-cli
+
 FROM node:24-slim
 
 # ─── Base tools ───────────────────────────────────────────────────────────────
@@ -6,9 +9,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 python3-pip python3-venv \
     tmux ripgrep unzip \
     && rm -rf /var/lib/apt/lists/*
-# Docker CLI + Compose v2
-RUN install -m 0755 -d /etc/apt/keyrings   && curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg   && chmod a+r /etc/apt/keyrings/docker.gpg   && echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian bookworm stable" > /etc/apt/sources.list.d/docker.list   && apt-get update && apt-get install -y --no-install-recommends docker-ce-cli docker-compose-plugin   && rm -rf /var/lib/apt/lists/*
 
+COPY --from=docker-cli /usr/local/bin/docker /usr/local/bin/docker
+COPY --from=compose-cli /docker-compose /usr/local/lib/docker/cli-plugins/docker-compose
 
 # ─── Bun ──────────────────────────────────────────────────────────────────────
 RUN curl -fsSL https://bun.sh/install | bash
@@ -36,18 +39,20 @@ RUN npm install -g \
     @brave/brave-search-mcp-server \
     && mkdir -p /root/.local/share
 
-RUN curl -fsSL https://opencode.ai/install | bash
+RUN curl -fsSL https://opencode.ai/v2/install | bash
 ENV PATH="/root/.opencode/bin:$PATH"
 
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-ENV PATH="/root/.local/bin:$PATH"	
+ENV PATH="/root/.local/bin:$PATH"
 
 RUN uv tool install git+https://github.com/overwirehq/claude-code-telegram@latest
+
+RUN npm install -g @agentmemory/agentmemory@latest
 
 
 # Copy your script into the image, then execute it at build time
 COPY ./run-config-file.sh /setup.sh
-RUN chmod +x /setup.sh && /setup.sh   
+RUN chmod +x /setup.sh && /setup.sh
 
 # Copy your script into the image, then execute it at build time
 COPY ./telegram-agy-claude-bots.sh /bots-setup.sh

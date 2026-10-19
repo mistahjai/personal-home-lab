@@ -5,8 +5,6 @@ services:
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
-    env_file:
-      - ${ENV_BASE}/_${COMPOSE_PROJECT_NAME}.env
     ports:
       - "5001:5001"
     volumes:

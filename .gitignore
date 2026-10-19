@@ -14,12 +14,14 @@ machine-1/openclaw/.openclaw-data/
 machine-1/stirling-pdf/stirling-data/
 machine-1/zotero-webdav/zotero-config/
 
-
 machine-1/syncthing/config/
-machine-1/dockge/dockge_data/
 machine-2/syncthing/config/
+
+machine-1/dockge/dockge_data/
 machine-2/dockge/dockge_data/
 
+machine-1/llm-models/config/
+machine-2/llm-models/config/
 
 # Temporary build files
 *.tmp

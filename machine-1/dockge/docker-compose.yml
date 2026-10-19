@@ -12,6 +12,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ${LOCAL_MOUNT_PATH}:${LOCAL_MOUNT_PATH}
+      - ${ENV_BASE}:${ENV_BASE}
       - ./dockge_data:/app/data
     environment:
       - DOCKGE_STACKS_DIR=${LOCAL_MOUNT_PATH}

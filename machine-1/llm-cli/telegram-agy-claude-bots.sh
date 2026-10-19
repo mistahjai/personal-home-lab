@@ -203,7 +203,7 @@ module.exports = {
     },
     {
       name: "kimaki-bot-discord",
-      script: "kimaki --data-dir /root/.kimaki --projects-dir /workspace",
+      script: "kimaki --data-dir /root/.kimaki",
       autorestart: true,
       env: {
         NODE_ENV: "production",

@@ -1,0 +1,71 @@
+services:
+  llama-server:
+    image: ghcr.io/ggml-org/llama.cpp:server
+    container_name: llama-cpu
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8080}:${PORT:-8080}"
+    environment:
+      - OPM_NUM_THREADS={THREADS:-6}
+    shm_size: "${SHM_SIZE:-2g}"
+    deploy:
+      resources:
+        limits:
+          memory: ${MEMORY_LIMIT:-8G}
+    cpuset: "${CPUSET}"
+    volumes:
+      - ${MODELS_FOLDER_PATH}:/models:ro
+      - ./config:/config:ro
+    command:
+      # --- Multi-Model Discovery Layout ---
+      - "--models-preset"
+      - "/config/models.ini"
+
+      - "--host"
+      - "${HOST:-0.0.0.0}"
+      - "--port"
+      - "${PORT:-8080}"
+
+      - "--models-max"
+      - "${MODELS_MAX:-1}"
+
+      - "--models-autoload"
+      - "--no-warmup"
+      - "--cont-batching"
+      - "--cache-prompt"
+      - "--kv-unified"
+
+      - "--log-verbosity"
+      - "${LOG_VERBOSITY:-4}"
+
+      - "--threads"
+      - "${THREADS:-6}"
+
+      - "--cache-ram"
+      - "${CACHE_RAM:-0}"
+
+      - "--parallel"
+      - "${PARALLEL:-1}"
+
+      - "--api-key-file"
+      - "${API_KEY_FILE:-/config/.apiKeys}"
+
+      - "--sleep-idle-seconds"
+      - "${SLEEP_IDLE_SECONDS:-900}"
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: open-webui
+    ports:
+      - "${UI_PORT:-9092}:8080"
+    volumes:
+      - open-webui:/app/backend/data
+    environment:
+      - OPENAI_API_BASE_URL=http://llama-server:${PORT:-9091}/v1
+      - OPENAI_API_KEY=${LLAMA_API_KEY}
+    depends_on:
+      - llama-server
+    restart: unless-stopped
+
+volumes:
+  open-webui:

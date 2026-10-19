@@ -14,41 +14,26 @@ services:
       - NET_RAW
       - NET_ADMIN
     security_opt:
-      - no-new-privileges:true      
+      - no-new-privileges:true
     group_add:
       - "${DOCKER_GID:-999}"
-    environment:
-      - DOCKER_HOST=tcp://dind:2375
     volumes:
       - ./.openclaw-data:/home/node/.openclaw
     networks:
       - default
-      - dind-net
-
   openclaw-cli:
     image: ${OPENCLAW_CLI_IMAGE}         # Swap to the standard minimal tag here!
     container_name: openclaw-cli
     network_mode: "service:openclaw-gateway"
     env_file:
       - ${ENV_BASE}/_${COMPOSE_PROJECT_NAME}.env
-    environment:
-      - DOCKER_HOST=tcp://dind:2375
     volumes:
       - ./.openclaw-data:/home/node/.openclaw
     profiles:
       - tools
-    networks:
-      - dind-net
 
 networks:
   default:
     driver: bridge
-  dind-net:
-    external: true
-
 # volumes:
 #   openclaw-data:
-  
-  
-
-

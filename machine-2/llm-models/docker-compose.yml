@@ -1,64 +1,104 @@
 services:
-  llama-lunar-final:
-    image: ghcr.io/ggml-org/llama.cpp:server-vulkan
-    container_name: llama-vulkan
+  llama-server:
+
+    ###### BUILD FROM SOURCE ########
+    # build:
+      # context: ${LLAMA_CPP_REPO}
+      # dockerfile: .devops/intel.Dockerfile
+      # target: server
+      # args:
+        # GGML_SYCL_F16: "ON"
+        # GGML_SYCL_DEVICE_ARCH: "lnl_m"  # Compiles explicitly for Lunar Lake paths (or lkl)
+    # image: llama-sycl:latest
+    # container_name: llama-sycl
+
+    ########### VULKAN ##############
+    # image: ghcr.io/ggml-org/llama.cpp:server-vulkan
+    # container_name: llama-vulkan
+
+    ############ SYCL ###############
+    image: ghcr.io/ggml-org/llama.cpp:full-intel
+    entrypoint: ["/app/llama-server"]
+    container_name: llama-sycl
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "${PORT:-8080}:${PORT:-8080}"
     devices:
       - /dev/dri:/dev/dri
     group_add:
-      - "39"
-      - "105"
+      - "${GID:-39}"
+      - "${UID:-105}"
 
-    shm_size: "12g"
+    cap_add:
+      - DAC_OVERRIDE
+
+    shm_size: "${SHM_SIZE:-2g}"
 
     deploy:
       resources:
         limits:
-          memory: 12.8G
+          memory: ${MEMORY_LIMIT:-12.5G}
 
     volumes:
       - ${MODELS_FOLDER_PATH}:/models:ro
+      - ./config:/config:ro
+
+    environment:
+      - ONEAPI_DEVICE_SELECTOR=level_zero:0
+
+      - GGML_SYCL_ENABLE_OPT=1
+      - GGML_SYCL_ENABLE_HOST_PINNED_MEM=1 # default
+      - ZES_ENABLE_SYSMAN=0 # default (was 1 earlier)
+      - UR_L0_ENABLE_RELAXED_ALLOCATION_LIMITS=1 # default = 0
+      - GGML_SCHED_MAX_COPIES=1
+
+      # - GGML_SYCL_PINNED_MEMORY=1 # not in SYCL.md (llama.cpp)
+      # - UR_L0_USE_IMMEDIATE_COMMANDLISTS=1 # not in SYCL.md (llama.cpp)
+      # - ZE_LOADER_DEBUG=1 # not in SYCL.md (llama.cpp)
+      # - SYCL_UR_TRACE=2 # not in SYCL.md (llama.cpp)
+      # - SYCL_CACHE_PERSISTENT=1 # not recommended by llama.cpp docs
+      # - SYCL_CACHE_DIR=/root/.cache # not recommended by llama.cpp docs
 
     command:
       # --- Multi-Model Discovery Layout ---
-      # - "-fit"
-      # - "off"
+      - "--models-preset"
+      - "/config/models.ini"
+
+      - "--host"
+      - "${HOST:-0.0.0.0}"
+      - "--port"
+      - "${PORT:-8080}"
+
+      - "--models-max"
+      - "${MODELS_MAX:-1}"
+
+      - "--models-autoload"
+      - "--no-warmup"
+      - "--cont-batching"
+      - "--cache-prompt"
+      - "--kv-unified"
+      - "--flash-attn"
+      - "${FLASH_ATTN}"
 
       - "--log-verbosity"
-      - "4"
-      
-      - "--models-dir"
-      - "/models"
-      - "--models-max"
-      - "1"                  
+      - "${LOG_VERBOSITY:-4}"
 
-      # --- 64K Context Layout & Dynamic Scaling ---
-      - "--ctx-size"
-      - "32768"
-      - "--cache-type-k"
-      - "q8_0"             
-      - "--cache-type-v"
-      - "q4_0"             
-      - "--flash-attn"
-      - "on"                 
-      - "--cache-ram"
-      - "0"
-      - "--kv-unified"           # CRITICAL: Allocates memory incrementally to prevent 14.3GB boot crash
-
-      # --- Threading & Parallel Multi-Agent Execution ---
       - "--n-gpu-layers"
-      - "99"
+      - "${N_GPU_LAYERS:-99}"
+      - "--threads"
+      - "${THREADS:-4}"
 
-      - "--no-warmup"               
+      - "--cache-ram"
+      - "${CACHE_RAM:-0}"
+
       - "--parallel"
-      - "2"                    
-      - "--cont-batching"                     
-      - "--host"
-      - "0.0.0.0"
-      - "--port"
-      - "8080"
+      - "${PARALLEL:-1}"
+
+      - "--api-key-file"
+      - "${API_KEY_FILE:-/config/.apiKeys}"
+
+      - "--sleep-idle-seconds"
+      - "${SLEEP_IDLE_SECONDS:-900}"
 
       # - "--load-mode"
       # - "none"
