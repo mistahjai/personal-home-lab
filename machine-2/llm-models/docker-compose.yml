@@ -1,25 +1,19 @@
 services:
   llama-server:
-
-    ###### BUILD FROM SOURCE ########
-    # build:
-      # context: ${LLAMA_CPP_REPO}
-      # dockerfile: .devops/intel.Dockerfile
-      # target: server
-      # args:
-        # GGML_SYCL_F16: "ON"
-        # GGML_SYCL_DEVICE_ARCH: "lnl_m"  # Compiles explicitly for Lunar Lake paths (or lkl)
-    # image: llama-sycl:latest
-    # container_name: llama-sycl
-
-    ########### VULKAN ##############
-    # image: ghcr.io/ggml-org/llama.cpp:server-vulkan
-    # container_name: llama-vulkan
-
-    ############ SYCL ###############
-    image: ghcr.io/ggml-org/llama.cpp:full-intel
-    entrypoint: ["/app/llama-server"]
+    image: llama-prism-sycl:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - BUILDKIT_INLINE_CACHE=1
+        - CACHE_BUST_PRISM=1
+        - CACHE_BUST_TORCHIT=1
+        - CACHE_BUST_GGML=1
+        - CACHE_BUST_SWAP=1
+      cache_from:
+        [llama-prism-sycl:latest]
     container_name: llama-sycl
+    entrypoint: ["/app/llama-swap"]
     restart: unless-stopped
     ports:
       - "${PORT:-8080}:${PORT:-8080}"
@@ -28,77 +22,34 @@ services:
     group_add:
       - "${GID:-39}"
       - "${UID:-105}"
-
     cap_add:
       - DAC_OVERRIDE
-
     shm_size: "${SHM_SIZE:-2g}"
-
     deploy:
       resources:
         limits:
           memory: ${MEMORY_LIMIT:-12.5G}
-
     volumes:
       - ${MODELS_FOLDER_PATH}:/models:ro
       - ./config:/config:ro
-
     environment:
       - ONEAPI_DEVICE_SELECTOR=level_zero:0
-
       - GGML_SYCL_ENABLE_OPT=1
       - GGML_SYCL_ENABLE_HOST_PINNED_MEM=1 # default
       - ZES_ENABLE_SYSMAN=0 # default (was 1 earlier)
       - UR_L0_ENABLE_RELAXED_ALLOCATION_LIMITS=1 # default = 0
       - GGML_SCHED_MAX_COPIES=1
-
+      - LLAMA_SWAP_CONFIG=${CONFIG_FILE:-config.yam}
+      - LLAMA_SWAP_LISTEN=${HOST:-0.0.0.0}:${PORT:-8080}
+      # - LLAMA_SWAP_WATCH_CONFIG="false"
       # - GGML_SYCL_PINNED_MEMORY=1 # not in SYCL.md (llama.cpp)
       # - UR_L0_USE_IMMEDIATE_COMMANDLISTS=1 # not in SYCL.md (llama.cpp)
       # - ZE_LOADER_DEBUG=1 # not in SYCL.md (llama.cpp)
       # - SYCL_UR_TRACE=2 # not in SYCL.md (llama.cpp)
       # - SYCL_CACHE_PERSISTENT=1 # not recommended by llama.cpp docs
       # - SYCL_CACHE_DIR=/root/.cache # not recommended by llama.cpp docs
-
     command:
-      # --- Multi-Model Discovery Layout ---
-      - "--models-preset"
-      - "/config/models.ini"
-
-      - "--host"
-      - "${HOST:-0.0.0.0}"
-      - "--port"
-      - "${PORT:-8080}"
-
-      - "--models-max"
-      - "${MODELS_MAX:-1}"
-
-      - "--models-autoload"
-      - "--no-warmup"
-      - "--cont-batching"
-      - "--cache-prompt"
-      - "--kv-unified"
-      - "--flash-attn"
-      - "${FLASH_ATTN}"
-
-      - "--log-verbosity"
-      - "${LOG_VERBOSITY:-4}"
-
-      - "--n-gpu-layers"
-      - "${N_GPU_LAYERS:-99}"
-      - "--threads"
-      - "${THREADS:-4}"
-
-      - "--cache-ram"
-      - "${CACHE_RAM:-0}"
-
-      - "--parallel"
-      - "${PARALLEL:-1}"
-
-      - "--api-key-file"
-      - "${API_KEY_FILE:-/config/.apiKeys}"
-
-      - "--sleep-idle-seconds"
-      - "${SLEEP_IDLE_SECONDS:-900}"
-
-      # - "--load-mode"
-      # - "none"
+      - "-config"
+      - "${CONFIG_FILE:-config.yaml}"
+      - "-listen"
+      - "${HOST:-0.0.0.0}:${PORT:-8080}"
